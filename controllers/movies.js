@@ -35,7 +35,7 @@ function createMovie(req, res, next) {
     .then((movie) => res.status(201).send(movie))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(new ValidationError('Переданы некорректные данные при создании карточки'));
+        next(new ValidationError('Переданы некорректные данные при создании фильма'));
       } else {
         next(err);
       }
@@ -55,12 +55,12 @@ function deleteMovie(req, res, next) {
   Movie.findById(req.params.movieId).then(
     ((movie) => {
       if (movie == null) {
-        throw new NotFoundError('Карточка не найдена');
+        throw new NotFoundError('Фильм не найден');
       } else if (req.user._id !== String(movie.owner)) {
         throw new ForbiddenError('Доступ ограничен');
       }
       return Movie.findByIdAndRemove(req.params.movieId).then(() => {
-        res.send({ message: 'Карточка удалена!' });
+        res.send({ message: 'Фильм удален!' });
       });
     }).catch(next),
   );
