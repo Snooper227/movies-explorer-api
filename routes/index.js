@@ -1,9 +1,10 @@
 const router = require('express').Router();
-const { celebrate, Joi } = require('celebrate');
+const { validationLogin, validationRegister } = require('../middelwares/validations');
 
 const { loginUser } = require('../controllers/users');
 const { createUser } = require('../controllers/users');
 const { NotFoundError } = require('../errors/NotFoundError');
+const { invalidAddresRequiste } = require('../utils/constants');
 const auth = require('../middelwares/auth');
 
 const userRoutes = require('./users');
@@ -17,24 +18,13 @@ router.get('/crash-test', () => {
 
 router.post(
   '/signin',
-  celebrate({
-    body: Joi.object().keys({
-      email: Joi.string().required().email(),
-      password: Joi.string().required(),
-    }),
-  }),
+  validationLogin,
   loginUser,
 );
 
 router.post(
   '/signup',
-  celebrate({
-    body: Joi.object().keys({
-      email: Joi.string().required().email(),
-      password: Joi.string().required(),
-      name: Joi.string().required().min(2).max(30),
-    }),
-  }),
+  validationRegister,
   createUser,
 );
 
@@ -42,7 +32,7 @@ router.use('/users', auth, userRoutes);
 router.use('/movies', auth, movieRoutes);
 
 router.all('*', auth, (req, res, next) => {
-  next(new NotFoundError('Неверный адрес запроса'));
+  next(new NotFoundError(invalidAddresRequiste));
 });
 
 module.exports = router;

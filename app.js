@@ -5,21 +5,20 @@ require('dotenv').config();
 const cors = require('cors');
 const { errors } = require('celebrate');
 const { handleErrors } = require('./middelwares/handleError');
-const limiter = require('./utils/rateLimiter');
+const { limiter, databaseUrl } = require('./utils/config');
 const routes = require('./routes/index');
 const { requestLogger, errorLogger } = require('./middelwares/logger');
 
 const app = express();
-const { PORT = 3000 } = process.env;
-const BASE_PATH = 'mongodb://127.0.0.1:27017/bitfilmsdb';
+const { PORT = 3000, NODE_ENV, DATABASE } = process.env;
 
-mongoose.connect(BASE_PATH, {
+mongoose.connect(NODE_ENV === 'production' ? DATABASE : databaseUrl, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
 app.use(cors());
-
+app.use(limiter);
 app.use(express.json());
 app.use(cookieParser());
 

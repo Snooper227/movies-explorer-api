@@ -7,6 +7,15 @@ const { User } = require('../models/user');
 const { NotFoundError } = require('../errors/NotFoundError');
 const { ConflictError } = require('../errors/ConflictError');
 const { ValidationError } = require('../errors/ValidationError');
+const { jwtKey } = require('../utils/config');
+const {
+  MONGOERROR,
+  STATUS_OK,
+  userNotFoundMassege,
+  duplicateEmaileErrorMassege,
+  invalidDataErrorMassege,
+  invalidIdErrorMassege,
+} = require('../utils/constants');
 
 function createUser(req, res, next) {
   const {
@@ -25,17 +34,17 @@ function createUser(req, res, next) {
     .then((user) => {
       const { _id } = user;
 
-      return res.status(201).send({
+      return res.status(STATUS_OK).send({
         email,
         name,
         _id,
       });
     })
     .catch((err) => {
-      if (err.code === 11000) {
-        next(new ConflictError('Пользователь с таким электронным адресом уже зарегистрирован'));
+      if (err.code === MONGOERROR) {
+        next(new ConflictError(duplicateEmaileErrorMassege));
       } else if (err.name === 'ValidationError') {
-        next(new ValidationError('Переданы некорректные данные при регистрации пользователя'));
+        next(new ValidationError(invalidDataErrorMassege));
       } else {
         next(err);
       }
@@ -49,10 +58,10 @@ function loginUser(req, res, next) {
     .then((user) => {
       const token = jwt.sign(
         { _id: user._id },
-        NODE_ENV === 'production' ? JWT_SECRET : 'some-secret-key',
+        NODE_ENV === 'production' ? JWT_SECRET : jwtKey,
         { expiresIn: '7d' },
       );
-      res.status(200).send({ token });
+      res.status(STATUS_OK).send({ token });
     })
     .catch((err) => {
       next(err);
@@ -63,13 +72,13 @@ function getUser(req, res, next) {
   User.findById(req.user._id)
     .then((user) => {
       if (user) {
-        return res.status(200).send(user);
+        return res.status(201).send(user);
       }
-      return next(new NotFoundError('Пользователь не найден'));
+      return next(new NotFoundError(userNotFoundMassege));
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        return next(new ValidationError('Передан невалидный id'));
+        return next(new ValidationError(invalidIdErrorMassege));
       }
       return next(err);
     });
@@ -78,39 +87,28 @@ function getUser(req, res, next) {
 function updateUser(req, res, next) {
   const { name, email } = req.body;
 
-  User.findOne({ email })
+  User.findByIdAndUpdate(
+    req.user._id,
+    { name, email },
+    {
+      new: true,
+      runValidators: true,
+    },
+  )
+    .orFail(new NotFoundError(userNotFoundMassege))
     .then((user) => {
-      if (user && String(user._id) !== req.user._id) {
-        throw new ConflictError('пользователь с таким email уже зарегистрирован');
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        return next(new ValidationError(invalidDataErrorMassege));
       }
-
-      return User.findByIdAndUpdate(
-        req.user._id,
-        { name, email },
-        {
-          new: true,
-          runValidators: true,
-          upsert: false,
-        },
-      )
-        .orFail(new NotFoundError('Пользователь с таким id не найден'))
-        .then((userData) => {
-          res.send(userData);
-        })
-        .catch((err) => {
-          if (err.name === 'ValidationError') {
-            next(new ValidationError('Переданы некорректные данные при обновлении профиля'));
-          } else if (err.name === 'CastError') {
-            next(new ValidationError('Передан невалидный id'));
-          } else if (err.statusCode === 404) {
-            next(new NotFoundError(err.message));
-          } else if (err.statusCode === 110000) {
-            next(new ConflictError('пользователь с таким email уже зарегистрирован'));
-          } else {
-            next(err);
-          }
-        });
-    });
+      if (err.code === MONGOERROR) {
+        return next(new ConflictError(duplicateEmaileErrorMassege));
+      }
+      return next(err);
+    })
+    .catch(next);
 }
 
 module.exports = {

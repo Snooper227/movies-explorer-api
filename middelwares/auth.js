@@ -1,6 +1,10 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const { UnauthorizathionError } = require('../errors/UnauthorizathionError');
+const {
+  unauthorizationErrorMassege,
+} = require('../utils/constants');
+const { jwtKey } = require('../utils/config');
 
 const { NODE_ENV, JWT_SECRET } = process.env;
 
@@ -10,7 +14,7 @@ module.exports = (req, res, next) => {
   const bearer = 'Bearer ';
 
   if (!authorization || !authorization.startsWith(bearer)) {
-    throw new UnauthorizathionError('Требуется авторизация');
+    throw new UnauthorizathionError(unauthorizationErrorMassege);
   }
 
   const token = authorization.split(bearer)[1];
@@ -19,10 +23,10 @@ module.exports = (req, res, next) => {
   try {
     payload = jwt.verify(
       token,
-      NODE_ENV === 'production' ? JWT_SECRET : 'some-secret-key',
+      NODE_ENV === 'production' ? JWT_SECRET : jwtKey,
     );
   } catch (err) {
-    throw new UnauthorizathionError('Требуется авторизация');
+    throw new UnauthorizathionError(unauthorizationErrorMassege);
   }
 
   req.user = payload;
