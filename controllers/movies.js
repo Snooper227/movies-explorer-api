@@ -4,32 +4,8 @@ const { ForbiddenError } = require('../errors/ForbiddenError');
 const { ValidationError } = require('../errors/ValidationError');
 
 function createMovie(req, res, next) {
-  const {
-    country,
-    director,
-    duration,
-    year,
-    description,
-    image,
-    trailerLink,
-    nameRU,
-    nameEN,
-    thumbnail,
-    movieId,
-  } = req.body;
-
   Movie.create({
-    country,
-    director,
-    duration,
-    year,
-    description,
-    image,
-    trailerLink,
-    nameRU,
-    nameEN,
-    thumbnail,
-    movieId,
+    ...req.body,
     owner: req.user._id,
   })
     .then((movie) => res.status(201).send(movie))
@@ -44,7 +20,6 @@ function createMovie(req, res, next) {
 
 function getMovies(_, res, next) {
   Movie.find({})
-    .sort({ createdAt: -1 })
     .then((movies) => res.send(movies))
     .catch((err) => {
       next(err);
@@ -52,18 +27,19 @@ function getMovies(_, res, next) {
 }
 
 function deleteMovie(req, res, next) {
-  Movie.findById(req.params.movieId).then(
-    ((movie) => {
-      if (movie == null) {
-        throw new NotFoundError('Фильм не найден');
-      } else if (req.user._id !== String(movie.owner)) {
-        throw new ForbiddenError('Доступ ограничен');
+  const { movieId } = req.params;
+
+  Movie.findById(movieId)
+    .orFail(new NotFoundError('Фильм не найден'))
+    .then((movie) => {
+      if (movie.owner.toString() !== req.user._id.toString()) {
+        return next(new ForbiddenError('Доступ ограничен'));
       }
-      return Movie.findByIdAndRemove(req.params.movieId).then(() => {
-        res.send({ message: 'Фильм удален!' });
-      });
-    }).catch(next),
-  );
+      return Movie.findByIdAndRemove(movieId)
+        .then(() => res.send({ message: 'Фильм удален!' }))
+        .catch((err) => next(err));
+    })
+    .catch((err) => next(err));
 }
 
 module.exports = {

@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
-
-const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/;
+const validator = require('validator');
 
 const movieSchema = new mongoose.Schema(
   {
@@ -28,7 +27,7 @@ const movieSchema = new mongoose.Schema(
       type: String,
       required: true,
       validate: {
-        validator: (url) => URL_REGEX.test(url),
+        validator: (v) => validator.isURL(v),
         message: 'Требуется ввести URL',
       },
     },
@@ -36,7 +35,7 @@ const movieSchema = new mongoose.Schema(
       type: String,
       required: true,
       validate: {
-        validator: (url) => URL_REGEX.test(url),
+        validator: (v) => validator.isURL(v),
         message: 'Требуется ввести URL',
       },
     },
@@ -44,7 +43,7 @@ const movieSchema = new mongoose.Schema(
       type: String,
       required: true,
       validate: {
-        validator: (url) => URL_REGEX.test(url),
+        validator: (v) => validator.isURL(v),
         message: 'Требуется ввести URL',
       },
     },
@@ -53,7 +52,7 @@ const movieSchema = new mongoose.Schema(
       ref: 'user',
       required: true,
     },
-    mivieId: {
+    movieId: {
       type: Number,
       required: true,
     },
@@ -64,10 +63,6 @@ const movieSchema = new mongoose.Schema(
     nameEN: {
       type: String,
       required: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
     },
   },
   { versionKey: false },

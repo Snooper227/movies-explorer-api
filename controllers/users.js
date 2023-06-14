@@ -76,31 +76,40 @@ function getUser(req, res, next) {
 }
 
 function updateUser(req, res, next) {
-  const { name, about } = req.body;
+  const { name, email } = req.body;
 
-  User.findByIdAndUpdate(
-    req.user._id,
-    { name, about },
-    {
-      new: true,
-      runValidators: true,
-      upsert: false,
-    },
-  )
-    .orFail(new NotFoundError('Пользователь с таким id не найден'))
+  User.findOne({ email })
     .then((user) => {
-      res.send(user);
-    })
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        next(new ValidationError('Переданы некорректные данные при обновлении профиля'));
-      } else if (err.name === 'CastError') {
-        next(new ValidationError('Передан невалидный id'));
-      } else if (err.statusCode === 404) {
-        next(new NotFoundError(err.message));
-      } else {
-        next(err);
+      if (user && String(user._id) !== req.user._id) {
+        throw new ConflictError('пользователь с таким email уже зарегистрирован');
       }
+
+      return User.findByIdAndUpdate(
+        req.user._id,
+        { name, email },
+        {
+          new: true,
+          runValidators: true,
+          upsert: false,
+        },
+      )
+        .orFail(new NotFoundError('Пользователь с таким id не найден'))
+        .then((userData) => {
+          res.send(userData);
+        })
+        .catch((err) => {
+          if (err.name === 'ValidationError') {
+            next(new ValidationError('Переданы некорректные данные при обновлении профиля'));
+          } else if (err.name === 'CastError') {
+            next(new ValidationError('Передан невалидный id'));
+          } else if (err.statusCode === 404) {
+            next(new NotFoundError(err.message));
+          } else if (err.statusCode === 110000) {
+            next(new ConflictError('пользователь с таким email уже зарегистрирован'));
+          } else {
+            next(err);
+          }
+        });
     });
 }
 

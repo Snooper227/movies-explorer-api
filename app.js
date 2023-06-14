@@ -21,7 +21,6 @@ mongoose.connect(BASE_PATH, {
 app.use(cors());
 
 app.use(express.json());
-app.use(limiter);
 app.use(cookieParser());
 
 app.use(requestLogger);
@@ -30,6 +29,7 @@ app.use('/', routes);
 app.use(errorLogger);
 app.use(errors());
 app.use((err, req, res, next) => { handleErrors(err, res, next); });
+app.use(limiter);
 
 app.listen(PORT, () => {
   console.log(`App open on port ${PORT}`);
